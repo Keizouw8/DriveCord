@@ -11,7 +11,6 @@ client.once(Events.ClientReady, ({ user: { tag } }) => console.log(`Logged in as
 new Elysia()
 	.use(html())
 	.onError(function({ code, error }){
-		if(code == "PARSE")	set.status(400); 
 		return new Response(error.toString());
 	})
     .get("/", function({ cookie: { token }}){
@@ -19,24 +18,22 @@ new Elysia()
 		return templates.hub();
 	})
 	.post("/authenticate", async function({ body, cookie: { token } }){
-		if(!(body?.server && body?.username && body?.password)) throw new ParseError();
+		if(!(body?.server && body?.username && body?.password)) return { error: true, reason: "malformed request" };
 		
-		var guild = client.guilds.cache.get(server);
+		var guild = client.guilds.cache.get(body.server);
 		if(!guild) return { error: true, reason: "bot not in server" };
 
 		var general = guild.channels.cache.find(channel => channel.name == "general");
-		if(!general) throw new ParseError();
+		if(!general) return { error: true, reason: "target server misconfigured" };
 
-		var message = findMessage(channel, function(msg){
+		var message = await findMessage(general, function(msg){
 			if(msg.author.id != client.user.id) return false;
-			
-			var [username, password] = msg.content.split("\n");
-			if(username != body.username) return false;
-			return Bun.password.verifySync(body.password, password);
+			return msg.content.split("\n")[0] == body.username;
 		});
 
-		if(message) return token.value = message.id;
-		message = await general.send(`${body.username}\n${Bun.password.hashSync(body.password)}`);
-		return token.value = message.id;
+		if(message) if(!Bun.password.verifySync(body.password, message.content.split("\n")[1])) return { error: true, reason: "incorrect password" };
+		if(!message) message = await general.send(`${body.username}\n${Bun.password.hashSync(body.password)}`);
+		token.value = message.id;
+		return { error: false };
 	})
-    .listen(process.env.PORT);
+    .listen(process.env.PORT, console.log(`Listening to port ${process.env.PORT}`));
