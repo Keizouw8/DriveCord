@@ -1,7 +1,7 @@
 <script>
 	["signup", "login"].forEach(function(auth){
 		document.getElementById(auth).addEventListener("click", async function(){
-			var response = await fetch(`/proxy/3030/api/${auth}`, {
+			var response = await fetch(`/proxy/3030/${auth}`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",

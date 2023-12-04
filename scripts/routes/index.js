@@ -10,6 +10,7 @@ export default function({ cookie: { token }}){
     var user = general?.messages?.fetch(user);
 
     if(!user){
+        console.log("clear");
         token.remove();
         return templates.landing();
     }
