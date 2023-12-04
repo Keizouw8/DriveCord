@@ -1,19 +1,22 @@
 <script>
-	document.getElementById("authenticate").addEventListener("click", async function(){
-		var response = await fetch("/authenticate", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				server: document.getElementById("server").value,
-				username: document.getElementById("username").value,
-				password: document.getElementById("password").value
-			})
-		});
+	["signup", "login"].forEach(function(auth){
+		document.getElementById(auth).addEventListener("click", async function(){
+			var response = await fetch(`/proxy/3030/api/${auth}`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					server: document.getElementById("server").value,
+					username: document.getElementById("username").value,
+					password: document.getElementById("password").value
+				})
+			});
 
-		var result = await response.json();
-		if(result.error) return alert(result.reason);
-		location.reload();
+			if(!response.ok) return alert(`${response.status}, ${await response.text()}`)
+			var result = await response.json();
+			if(result.error) return alert(result.reason);
+			location.reload();
+		});
 	});
 </script>
