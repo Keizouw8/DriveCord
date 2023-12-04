@@ -1,8 +1,8 @@
-import { Client, GatewayIntentBits, Events  } from "discord.js";
+import { Client, GatewayIntentBits, Events, ChannelType  } from "discord.js";
 import findMessage from "./scripts/findMessage.js";
-import { Elysia, ParseError } from "elysia";
 import templates from "./templates.js";
 import { html } from "@elysiajs/html";
+import { Elysia } from "elysia";
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 client.login(process.env.TOKEN);
@@ -32,7 +32,11 @@ new Elysia()
 		});
 
 		if(message) if(!Bun.password.verifySync(body.password, message.content.split("\n")[1])) return { error: true, reason: "incorrect password" };
-		if(!message) message = await general.send(`${body.username}\n${Bun.password.hashSync(body.password)}`);
+		if(!message){
+			message = await general.send(`${body.username}\n${Bun.password.hashSync(body.password)}`);
+			await guild.channels.create({ name: message.id });
+			await guild.channels.create({ name: message.id+"-chunks" });
+		}
 		token.value = message.id;
 		return { error: false };
 	})
