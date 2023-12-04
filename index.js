@@ -1,22 +1,42 @@
-import { Elysia } from "elysia";
-import { html } from "@elysiajs/html";
-import templates from "./templates.js";
 import { Client, GatewayIntentBits, Events  } from "discord.js";
-import { randomUUID } from "crypto";
+import findMessage from "./scripts/findMessage.js";
+import { Elysia, ParseError } from "elysia";
+import templates from "./templates.js";
+import { html } from "@elysiajs/html";
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 client.login(process.env.TOKEN);
-client.once(Events.ClientReady, async function(readyClient){
-	console.log(`Logged in as ${readyClient.user.tag}`);
-	var guild = client.guilds.cache.get("1178861482906226688");
-	console.log(client.guilds.cache.map(guild => guild.id));
-	console.log(guild.channels.cache.map(guild => guild.name));
-});
+client.once(Events.ClientReady, ({ user: { tag } }) => console.log(`Logged in as ${tag}`));
 
 new Elysia()
 	.use(html())
+	.onError(function({ code, error }){
+		if(code == "PARSE")	set.status(400); 
+		return new Response(error.toString());
+	})
     .get("/", function({ cookie: { token }}){
 		if(!token.value) return templates.landing();
 		return templates.hub();
+	})
+	.post("/authenticate", async function({ body, cookie: { token } }){
+		if(!(body?.server && body?.username && body?.password)) throw new ParseError();
+		
+		var guild = client.guilds.cache.get(server);
+		if(!guild) return { error: true, reason: "bot not in server" };
+
+		var general = guild.channels.cache.find(channel => channel.name == "general");
+		if(!general) throw new ParseError();
+
+		var message = findMessage(channel, function(msg){
+			if(msg.author.id != client.user.id) return false;
+			
+			var [username, password] = msg.content.split("\n");
+			if(username != body.username) return false;
+			return Bun.password.verifySync(body.password, password);
+		});
+
+		if(message) return token.value = message.id;
+		message = await general.send(`${body.username}\n${Bun.password.hashSync(body.password)}`);
+		return token.value = message.id;
 	})
     .listen(process.env.PORT);
